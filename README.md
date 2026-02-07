@@ -57,7 +57,7 @@ Lux AI Season 3 agent that combines a **rule-based policy** (relic discovery, ex
     ├── debug_dqn.py
     ├── inspect_checkpoints.py
     ├── training_monitor.py
-    └── readme.md              # Result tables / notes
+    └── results.md              # Result tables / notes
 ```
 
 ---
