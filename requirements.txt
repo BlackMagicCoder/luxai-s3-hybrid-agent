@@ -1,0 +1,8 @@
+# Agent 7 dependencies (from actual imports in agent_7)
+numpy
+torch
+luxai_s3
+python-dotenv
+
+# Note: luxai_s3 may need to be installed from the Lux AI Season 3 Python kit
+# if not available on PyPI: https://github.com/Lux-AI-Challenge/Lux-Design-S3
