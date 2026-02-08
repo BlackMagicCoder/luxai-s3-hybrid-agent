@@ -1,0 +1,321 @@
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\begin{document}
+
+\section*{Hybrid Rule-Based Deep Q-Network Agent for LUX AI}
+
+\begin{algorithm}[H]
+\caption{Overall Agent Architecture}
+\begin{algorithmic}[1]
+\STATE \textbf{Initialize Components:}
+\STATE Create Q-network (neural network for action evaluation)
+\STATE Create target network (stable copy of Q-network)
+\STATE Create replay buffer (stores past experiences)
+\STATE Set hyperparameters: learning rate, discount factor, exploration rates
+\STATE Initialize tracking systems: relic memory, productive tiles, unit assignments
+\STATE
+\FOR{each game}
+    \STATE Reset game-specific memory
+    \FOR{each match (3 matches per game)}
+        \FOR{each time step}
+            \STATE Observe current state and update relic positions
+            \FOR{each active unit}
+                \STATE Generate random number $u$ from [0,1]
+                \IF{$u <$ DQN probability}
+                    \STATE Select action using DQN policy (Algorithm 3)
+                \ELSE
+                    \STATE Select action using rule-based policy (Algorithm 4)
+                \ENDIF
+                \STATE Augment with attack action if appropriate (Algorithm 5)
+            \ENDFOR
+            \STATE Execute all unit actions
+            \STATE Observe rewards and next state
+            \STATE Update productive tile statistics (Algorithm 6)
+            \STATE Calculate shaped rewards for each unit (Algorithm 7)
+            \STATE Store transitions in replay buffer
+            \IF{training step}
+                \STATE Perform network update (Algorithm 8)
+            \ENDIF
+        \ENDFOR
+        \STATE Reset match-specific memory
+    \ENDFOR
+    \STATE Reset all memories for next game
+\ENDFOR
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{Neural Network Architecture}
+\begin{algorithmic}[1]
+\STATE \textbf{Q-Network Structure:}
+\STATE Input layer: Game state features (position, energy, distances, etc.)
+\STATE Hidden layer 1: 256 neurons with ReLU activation
+\STATE Hidden layer 2: 256 neurons with ReLU activation
+\STATE Hidden layer 3: 256 neurons with ReLU activation
+\STATE Hidden layer 4: 128 neurons with ReLU activation
+\STATE Output layer: 5 neurons (Q-values for each action)
+\STATE \quad Actions: 0=Stay, 1=Up, 2=Right, 3=Down, 4=Left
+\STATE
+\STATE \textbf{Target Network:}
+\STATE Same architecture as Q-network
+\STATE Updated periodically (every $N$ training steps) for learning stability
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{DQN Action Selection (Epsilon-Greedy)}
+\begin{algorithmic}[1]
+\REQUIRE Current state, Q-network, exploration rate
+\STATE
+\STATE Generate random number $u$ from [0,1]
+\IF{$u <$ exploration rate}
+    \STATE \textbf{return} random action \quad \textit{// Exploration}
+\ELSE
+    \STATE Compute Q-values for all actions using Q-network
+    \STATE \textbf{return} action with highest Q-value \quad \textit{// Exploitation}
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{Rule-Based Policy}
+\begin{algorithmic}[1]
+\REQUIRE Unit ID, time step, game state, relic positions, productive tiles
+\STATE
+\STATE Extract unit position, energy level, and active status
+\IF{unit inactive OR energy below safety threshold}
+    \STATE \textbf{return} Stay action
+\ENDIF
+\STATE
+\STATE Determine number of active units
+\STATE Calculate unit's rank among active units
+\STATE Compute exploration ratio based on game phase:
+\STATE \quad Early matches: higher exploration (find new relics)
+\STATE \quad Late matches: lower exploration (focus on collection)
+\STATE
+\STATE Assign unit role based on rank and exploration ratio
+\STATE
+\IF{unit is COLLECTOR}
+    \STATE \textbf{Priority 1: Stay on productive tiles}
+    \IF{current position is productive tile}
+        \STATE \textbf{return} Stay action
+    \ENDIF
+    \STATE
+    \STATE \textbf{Priority 2: Move to known productive tiles}
+    \IF{productive tiles exist}
+        \STATE Find nearest productive tile
+        \STATE \textbf{return} direction toward nearest productive tile
+    \ENDIF
+    \STATE
+    \STATE \textbf{Priority 3: Systematic grid exploration}
+    \IF{unit has no assignment}
+        \STATE Assign unit to position in 5×5 grid around relics
+    \ENDIF
+    \STATE Calculate target position from assignment
+    \STATE \textbf{return} direction toward assigned grid position
+\ELSE
+    \STATE \textit{// Unit is EXPLORER}
+    \STATE \textbf{Systematic quadrant search}
+    \IF{unit has no exploration target}
+        \STATE Assign quadrant based on unit ID (4 quadrants total)
+        \STATE Generate random target within assigned quadrant
+    \ENDIF
+    \STATE
+    \IF{target reached OR stuck at current target}
+        \STATE Generate new random target in quadrant
+    \ENDIF
+    \STATE \textbf{return} direction toward exploration target
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{Attack Action Selection}
+\begin{algorithmic}[1]
+\REQUIRE Unit position, game state, unit energy, attack range
+\STATE
+\STATE Get opponent positions and ally positions
+\IF{energy insufficient OR no opponents visible}
+    \STATE \textbf{return} no attack
+\ENDIF
+\STATE
+\STATE Initialize best score = $-\infty$ and best target = none
+\FOR{each possible target location within attack range}
+    \STATE Calculate direct hit score (enemies at exact target)
+    \STATE Calculate splash score (enemies adjacent to target)
+    \STATE Calculate friendly fire penalty (allies at or near target)
+    \STATE Calculate distance penalty (slight preference for closer targets)
+    \STATE
+    \STATE Total score = direct + splash $-$ friendly fire $-$ distance
+    \STATE
+    \IF{score $>$ best score}
+        \STATE Update best score and best target
+    \ENDIF
+\ENDFOR
+\STATE
+\IF{best score $\geq$ minimum threshold}
+    \STATE \textbf{return} attack toward best target
+\ELSE
+    \STATE \textbf{return} no attack
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{Productive Tile Detection}
+\begin{algorithmic}[1]
+\REQUIRE Current state, team points, previous points, position statistics
+\STATE
+\STATE Calculate points gained this step = current points $-$ previous points
+\STATE Find all unit positions near known relics (within distance 3)
+\STATE
+\FOR{each position near relics}
+    \STATE Increment occupancy counter for this position
+\ENDFOR
+\STATE
+\IF{points gained $>$ 0 AND units are near relics}
+    \STATE Distribute gained points among near-relic positions
+    \FOR{each position that was occupied}
+        \STATE Update total points earned at this position
+        \STATE Calculate confidence = total points / times occupied
+        \STATE
+        \IF{confidence $>$ 0.5 AND occupied at least 3 times}
+            \STATE Mark position as "productive tile"
+        \ENDIF
+    \ENDFOR
+\ENDIF
+\STATE
+\STATE \textbf{Periodic cleanup (every 100 steps):}
+\STATE Remove tiles from productive set if confidence drops below 0.7
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{Reward Shaping Function}
+\begin{algorithmic}[1]
+\REQUIRE State, action, team reward, productive tiles, statistics
+\STATE
+\STATE Initialize shaped reward = 3.0 $\times$ team reward
+\STATE Extract current position and next position from states
+\STATE
+\STATE \textbf{Component 1: Productive Tile Bonuses}
+\IF{currently on productive tile}
+    \STATE Add large bonus scaled by tile confidence
+    \IF{stayed on same tile (didn't move)}
+        \STATE Add additional staying bonus
+    \ENDIF
+\ENDIF
+\IF{moved to a productive tile}
+    \STATE Add bonus for reaching productive tile
+\ENDIF
+\STATE
+\STATE \textbf{Component 2: Distance Improvement}
+\IF{productive tiles are known}
+    \STATE Calculate distance improvement toward nearest productive tile
+    \STATE Add reward proportional to improvement
+\ELSE
+    \STATE Calculate distance improvement toward nearest relic
+    \STATE Add smaller reward proportional to improvement
+\ENDIF
+\STATE
+\STATE \textbf{Component 3: Energy Management}
+\STATE Calculate energy change
+\IF{energy increased}
+    \STATE Add small bonus for energy recovery
+\ENDIF
+\IF{energy below threshold AND not on productive tile}
+    \STATE Add penalty for risky low energy state
+\ENDIF
+\STATE
+\STATE \textbf{Component 4: Movement Encouragement}
+\IF{unit moved AND not leaving productive tile}
+    \STATE Add small bonus to encourage exploration
+\ENDIF
+\STATE
+\STATE \textbf{Component 5: Survival Bonus}
+\STATE Add small constant bonus for staying alive
+\STATE
+\STATE \textbf{Component 6: Leaving Productive Tile Penalty}
+\IF{left productive tile without going to another productive tile}
+    \STATE Add penalty scaled by confidence of abandoned tile
+\ENDIF
+\STATE
+\STATE \textbf{return} shaped reward
+\end{algorithmic}
+\end{algorithm}
+
+\begin{algorithm}[H]
+\caption{Training Procedure (Double DQN)}
+\begin{algorithmic}[1]
+\REQUIRE Replay buffer, batch size, Q-network, target network
+\STATE
+\IF{not enough experiences in buffer}
+    \STATE \textbf{return} \quad \textit{// Skip training}
+\ENDIF
+\STATE
+\STATE Sample random batch of experiences from replay buffer
+\STATE Each experience contains: (state, action, reward, next state, done flag)
+\STATE
+\STATE \textbf{Step 1: Compute current Q-value predictions}
+\STATE Pass states through Q-network
+\STATE Extract Q-values for actions that were actually taken
+\STATE
+\STATE \textbf{Step 2: Compute target Q-values (Double DQN method)}
+\STATE Use Q-network to SELECT best actions for next states
+\STATE Use target network to EVALUATE those actions
+\STATE Calculate targets = reward + discount $\times$ evaluated Q-value
+\STATE If episode ended, target = reward only (no future value)
+\STATE
+\STATE \textbf{Step 3: Calculate loss and update}
+\STATE Compute mean squared error between predictions and targets
+\STATE Calculate gradients of loss with respect to network parameters
+\STATE Clip gradients to prevent instability
+\STATE Update network parameters using Adam optimizer
+\STATE
+\STATE \textbf{Step 4: Decay exploration rate}
+\STATE Reduce exploration rate: new rate = current rate $\times$ decay factor
+\STATE Ensure rate doesn't go below minimum value
+\STATE
+\STATE \textbf{Step 5: Periodically update target network}
+\IF{training step is multiple of update frequency}
+    \STATE Copy Q-network parameters to target network
+\ENDIF
+\end{algorithmic}
+\end{algorithm}
+
+\section*{Key Concepts Explained}
+
+\subsection*{Hybrid Policy}
+The agent combines two decision-making strategies:
+\begin{itemize}
+\item \textbf{Rule-based policy:} Hand-crafted rules for reliable behavior
+\item \textbf{DQN policy:} Learned through experience via neural networks
+\item A probability parameter controls which policy is used
+\end{itemize}
+
+\subsection*{Q-Network}
+A neural network that estimates the "quality" (Q-value) of each action in a given state. Higher Q-values indicate better expected future rewards.
+
+\subsection*{Experience Replay}
+Past experiences are stored in a buffer and randomly sampled during training. This breaks correlations between consecutive experiences and improves learning stability.
+
+\subsection*{Target Network}
+A slowly-updated copy of the Q-network used for computing learning targets. This prevents the "moving target" problem and stabilizes training.
+
+\subsection*{Reward Shaping}
+The basic team reward is augmented with additional signals to guide learning:
+\begin{itemize}
+\item Bonuses for productive tiles
+\item Distance improvement rewards
+\item Energy management signals
+\item Exploration encouragement
+\end{itemize}
+
+\subsection*{Productive Tile Detection}
+Statistical tracking identifies which positions near relics actually generate points. Confidence increases as more evidence accumulates.
+
+\end{document}
