@@ -1,0 +1,10 @@
+%YAML 1.2
+---
+
+AGENT_1:
+  IMPORT_PATH: 'agents.TwoAngelsForCharlie.agent_7.agent_afc_dqn.AfcAgent'
+  LOAD_PATH: 'TwoAngelsForCharlie/agent_7/afc_dqn_v3_1.pth'
+
+BATTLE_SESSION_2:
+  IMPORT_PATH: 'agents.TwoAngelsForCharlie.agent_7.agent_afc_dqn.AfcAgent'
+  LOAD_PATH: 'TwoAngelsForCharlie/agent_7/afc_dqn_v3_1.pth'
