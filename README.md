@@ -4,7 +4,7 @@ Lux AI Season 3 agent that combines a **rule-based policy** (relic discovery, ex
 
 ---
 
-## What This Repo Contains (Our Work - Jerome and Kira )
+## What This Repo Contains (Our Work - Jerome and Kira)
 
 - **Hybrid agent** (`agent_afc_dqn.py`): Rule-based behavior with a DQN that can take over per unit with probability `epsilon_rl`. Actions are movement (stay/up/right/down/left) and optional sap; the DQN outputs a 5-D action choice. Uses experience replay, target network, and reward shaping (e.g. productive-tile detection, distance-to-relic, energy).
 - **Design choices**: (1) **Hybrid** so rules handle exploration and relic coverage while the DQN learns where to stand for points. (2) **17-D per-unit state** (normalized position, energy, step fraction, relic visibility and distance, map edges, nearest ally/enemy) so the net sees a fixed-size vector. (3) **Statistical productive-tile tracking** in `update()` to credit positions near relics when team points increase and to shape rewards for staying/moving to those tiles. (4) **Sap logic** with scoring over the sap AoE, friendly-fire avoidance, and a score threshold before firing.
