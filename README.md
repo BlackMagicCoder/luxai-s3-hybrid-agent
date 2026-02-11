@@ -7,9 +7,9 @@ Lux AI Season 3 agent that combines a **rule-based policy** (relic discovery, ex
 ## What This Repo Contains (Our Work - Jerome and Kira)
 
 - **Hybrid agent** (`agent_afc_dqn.py`): Rule-based behavior with a DQN that can take over per unit with probability `epsilon_rl`. Actions are movement (stay/up/right/down/left) and optional sap; the DQN outputs a 5-D action choice. Uses experience replay, target network, and reward shaping (e.g. productive-tile detection, distance-to-relic, energy).
-- **Design choices**: (1) **Hybrid** so rules handle exploration and relic coverage while the DQN learns where to stand for points. (2) **17-D per-unit state** (normalized position, energy, step fraction, relic visibility and distance, map edges, nearest ally/enemy) so the net sees a fixed-size vector. (3) **Statistical productive-tile tracking** in `update()` to credit positions near relics when team points increase and to shape rewards for staying/moving to those tiles. (4) **Sap logic** with scoring over the sap AoE, friendly-fire avoidance, and a score threshold before firing.
+- **Design choices**: (1) **Hybrid** so rules handle exploration and relic coverage while the DQN learns where to stand for points. (2) **17-D per-unit state** (normalized position, energy, step fraction, relic visibility and distance, map edges, nearest ally/enemy) so the net sees a fixed-size vector. (3) **Statistical productive-tile tracking** in `update()` to credit positions near relics when team points increase and to shape rewards for staying/moving to those tiles. (4) **Sap logic** with scoring over the sap AoE, friendly-fire avoidance, and a score threshold before firing (more details in **agent_7/LaTex/agent.pdf**).
 - **Training**: Self-play loop in `adaptive_training.py` (cycles of games, benchmark vs a baseline, early stop on degradation). Checkpoints save Q-net, target net, optimizer, and training counters; replay buffer is not saved.
-- **Results/evidence**: Result tables and checkpoint notes live in **`agent_7/readme.md`** in this repo. Those tables report runs (e.g. 20 games) for Agent7 variants vs a baseline: win rates and average points. For example, Agent7-DQN80-Rules20 is reported at 90% win rate and 75.2 avg pts; Agent7-DQN100-v3_1 at 85% and 79.2 avg pts. No automated benchmark script is bundled that reproduces these without the course baseline; to reproduce, you would need the Lux AI S3 environment and a baseline opponent (see External dependencies below).
+- **Results/evidence**: Result tables and checkpoint notes live in **`agent_7/results.md`** in this repo. Those tables report runs (e.g. 20 games) for Agent7 variants vs a baseline: win rates and average points. For example, Agent7-DQN80-Rules20 is reported at 90% win rate and 75.2 avg pts; Agent7-DQN100-v3_1 at 85% and 79.2 avg pts. No automated benchmark script is bundled that reproduces these without the course baseline; to reproduce, you would need the Lux AI S3 environment and a baseline opponent (see External dependencies below).
 
 ---
 
@@ -33,7 +33,7 @@ Lux AI Season 3 agent that combines a **rule-based policy** (relic discovery, ex
 - `improved_agent.py` — alternate agent variant (same interface, different heuristics).
 - `test_agents.py`, `test_agents_improved.py`, `test_epsilon_rl.py` — evaluation scripts (depend on a baseline opponent).
 - `debug_dqn.py`, `inspect_checkpoints.py`, `training_monitor.py` — inspection and monitoring.
-- `readme.md` — local notes and result tables (evidence for reported metrics).
+- `results.md` — local notes and result tables (evidence for reported metrics).
 
 ### Minimal repo tree
 
@@ -64,7 +64,7 @@ Lux AI Season 3 agent that combines a **rule-based policy** (relic discovery, ex
 
 ## Dependencies Outside agent_7 (How to Handle Them)
 
-Anything the agent or scripts use that lives **outside** the agent_7 folder is classified below. **Do not copy professor base code into the repo.** Use one of: **replace with a small local implementation**, or **treat as external**.
+Anything the agent or scripts use that lives **outside** the agent_7 folder is classified below.
 
 | Dependency | Where it lives in course repo | Classification | What to do |
 |------------|------------------------------|----------------|------------|
@@ -104,11 +104,11 @@ Specific commands are not verifiable here without the full course environment; t
 
 - **Seeds**: The code does not set global RNG seeds. For reproducible runs, set `random`, `numpy`, and `torch` seeds at the start of the run script.
 - **Checkpoints**: They store Q-network, target network, optimizer, and training metadata (e.g. `train_steps`, `games_played`, `epsilon_dqn`, `epsilon_rl`). Replay buffer is not saved.
-- **Reported metrics**: All cited result numbers come from the tables and notes in **`agent_7/readme.md`**. There is no in-repo script that recomputes those numbers without the course baseline; adding a small benchmark script and documenting how to run it would strengthen reproducibility.
+- **Reported metrics**: All cited result numbers come from the tables and notes in **`agent_7/results.md`**. There is no in-repo script that recomputes those numbers without the course baseline; adding a small benchmark script and documenting how to run it would strengthen reproducibility.
 
 ---
 
 ## Licensing and Credits
 
-- **Professor-provided / course base** (Lux framework, `lux/`, `agents/default/`, other agents, competition harness) is **not** included and is **not** presented as part of this work. It is either used as an external dependency or replaced by minimal local code (e.g. local feat_generator, minimal baseline).
+- **Professor-provided / course base** (Lux framework, `lux/`, `agents/default/`, other agents, competition harness) is **not** included and is **not** presented as part of this work. It is used as an external dependency.
 - **Lux AI Season 3**: [Lux-Design-S3](https://github.com/Lux-AI-Challenge/Lux-Design-S3). Attribution and license follow the official project and your course rules.
